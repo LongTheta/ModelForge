@@ -1,6 +1,6 @@
 {
   "id": "kb-pipeline-gitlab-secure-001",
-  "doc_type": "secure_pipeline",
+  "doc_type": "secure_cicd_pattern",
   "title": "Secure GitLab CI pattern for build and deploy",
   "summary": "Reference pipeline structure: protected variables, no inline secrets, artifact signing hooks.",
   "body": "A secure pipeline separates build, test, scan, and deploy stages. Use protected CI variables for registry credentials and deployment tokens; never echo secrets in script output. Pin base images by digest in Dockerfile FROM lines where possible.\n\nAdd SAST/dependency scanning stages ahead of container build. For GitOps, the deploy job should only apply manifests that passed policy checks and image digest rules—matching AegisML deterministic checks in merge requests.",

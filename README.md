@@ -1,89 +1,69 @@
-# AegisML – Secure ML Delivery & Governance Platform
+# ModelForge / AegisML
 
-**Implementation (MVP):** the runnable service, CI/CD ([`.gitlab/README.md`](.gitlab/README.md)), Kubernetes manifests, policy scripts, and Grafana dashboard live under [`aegisml/`](aegisml/README.md).
+FastAPI + scikit-learn inference service, GitLab CI (build/scan/policy), Kustomize manifests. **Policy pass/fail** is from `policy_check.py` and optional agent gate rules only; optional Chroma + KB enriches finding text after the verdict and does not change it.
 
-## Overview
+**Stack:** Python 3.10+, Prometheus `/metrics`, OTLP traces via `[otel]` + env, Kaniko, Kubernetes.
 
-AegisML is a production-ready ML delivery platform that unifies secure development, automated policy enforcement, GitOps-based deployment, and full-stack observability. It is built for teams that need governed ML releases: deterministic gates in CI/CD, traceable decisions, and runtime visibility without trading velocity for control.
-
-The platform treats ML services as first-class production workloads. Pipelines validate code and artifacts, an agent-driven policy layer blocks or gates non-compliant changes, and Argo CD promotes approved state to Kubernetes. OpenTelemetry and Grafana provide operational signals; retrieval-augmented context is used strictly to clarify findings and remediation paths, not to override policy outcomes.
+---
 
 ## Architecture
 
 ```
-Developer (code-server)
-        |
-        v
-   GitLab CI/CD
-        |
-        v
- Policy Enforcement Agent
-        |
-        v
-  Build / Test / Scan
-        |
-        v
-    GitOps (Argo CD)
-        |
-        v
-    Kubernetes
-        |
-        +-- ML Service
-        |
-        +-- Observability (metrics, traces, dashboards)
+CI (lint, test, build, scan, policy [+ optional agent]) --> image registry
+                                                          |
+Kustomize manifests (GitOps sync out of band) -----------> Pods: /predict, /healthz, /readyz, /metrics
 ```
 
-## Core Capabilities
+`policy_check.py` runs in CI (and similar batch paths), not inside the inference request path.
 
-- **Secure development environment** — Isolated, consistent workspaces (e.g. code-server) aligned with organizational baselines and secrets handling.
-- **CI/CD for ML services (GitLab)** — Pipelines for build, test, containerization, and artifact promotion with versioned, repeatable stages.
-- **Policy enforcement (agent-driven)** — Automated validation against security, compliance, and engineering rules; failures are explicit and actionable.
-- **GitOps deployment** — Declarative cluster state; changes flow through review, merge, and sync with auditable promotion.
-- **Production readiness framework** — Checklists and gates covering availability, rollback, configuration, and operational handoff—not ad-hoc go-live.
-- **Observability and reliability** — Metrics and traces wired through OpenTelemetry; Grafana for SLOs, incident response, and capacity signals.
-- **RAG-enhanced policy context (explanations only)** — Retrieval augments explanations of violations and suggested fixes; it does not decide pass/fail.
+---
 
-## Tech Stack
+## What ships here
 
-| Area | Components |
-|------|------------|
-| Source & CI/CD | GitLab, container builds, automated tests and scans |
-| Policy | Policy Enforcement Agent, rule catalogs, integration with pipeline stages |
-| Delivery | Argo CD, Git-backed manifests, progressive or controlled sync |
-| Runtime | Kubernetes, ML inference and supporting services |
-| Observability | OpenTelemetry instrumentation, Grafana dashboards and alerting |
+| Area | Detail |
+|------|--------|
+| **Runtime** | `GET /healthz` (liveness), `GET /readyz` (model loaded), `POST /predict`, `GET /metrics` |
+| **CI** | Ruff, pytest + coverage, `kubectl kustomize` + client dry-run, Kaniko push, pip-audit / Trivy (strict = CI vars), `security:policy` runs `policy_check.py` |
+| **Policy** | `aegisml/scripts/policy_check.py` — deterministic over repo YAML / `.gitlab-ci.yml` patterns; `POLICY_AGENT_PACKAGE` enables separate agent job + `policy_agent_gate.py` |
+| **RAG** | `aegisml/src/retrieval/`, `aegisml/knowledge_base/` — optional; requires `[retrieval]` and index ingest |
+| **Deploy** | No deploy stage in this repo; sample `aegisml/k8s/` + `k8s/argo/application-example.yaml` |
 
-## Data Flow
+---
 
-1. Developer commits code to the repository from the secure development environment.
-2. GitLab CI executes the pipeline: build, test, and security/quality scans as defined for the ML service.
-3. The Policy Enforcement Agent evaluates the change against enforced rules (e.g. image policy, secrets, supply-chain, deployment constraints).
-4. Findings are generated: pass, fail, or conditional outcomes with references to violated controls.
-5. RAG enriches context for human review—plain-language explanation of the violation and alignment with policy intent (no change to enforcement outcome).
-6. On success, deployment proceeds via Argo CD applying approved manifests to the target cluster(s).
-7. Observability captures runtime metrics and traces from the ML service and platform components for health, latency, and error budgets.
+## CI to cluster (short)
 
-## Example Use Case
+1. Merge triggers pipeline: lint → test → image build → security (including deterministic policy JSON).
+2. Image tag + digest artifact; policy artifacts e.g. `aegisml/policy-findings.json`, optional `artifacts/policy-check/`.
+3. Cluster rollout uses your process; pods expose metrics; OTLP if configured.
 
-A team ships an **inference service** behind an API in Kubernetes. On merge, the **pipeline runs** unit tests, model packaging, and image build; the **policy agent** rejects a deployment when the container runs as root and a required label is missing. **Findings** cite the specific rule; **RAG-backed text** explains why the rule exists and points to the **template or patch** that remediates (e.g. non-root user, required labels). After the developer fixes the manifest and the pipeline **passes**, **Argo CD syncs** the new revision. **Grafana and traces** show request rate, p95 latency, and error ratio; alerts fire if SLOs degrade.
+---
 
-## Design Principles
+## Quick start
 
-**Rules decide. RAG explains. Templates remediate.**
+```bash
+cd aegisml && make install && make lint && make test && make run
+```
 
-- **Deterministic enforcement** — Policy outcomes derive from explicit rules and pipeline inputs, not from probabilistic model output.
-- **Auditability** — Who changed what, which commit and image were promoted, and which checks ran are recorded for review and compliance evidence.
-- **Reproducibility** — Same commit and configuration produce the same build artifacts and the same gated path to production.
-- **Secure defaults** — Least privilege, minimal images, secrets outside source control, and safe-by-default Kubernetes and network posture unless overridden with justification.
+- `http://127.0.0.1:8080/docs` — probes and `/metrics` as above  
+- Image: `make docker-build` / `make docker-run` (context = `aegisml/`)  
+- Policy: `python scripts/policy_check.py` → `policy-findings.json` (gitignored); fails on high/critical per `policies/policy-config.yaml`  
 
-## Why This Matters
+Pipelines: root `.gitlab-ci.yml` → [`.gitlab/ci/`](.gitlab/README.md).
 
-This work is a concrete exercise in **end-to-end platform and ML delivery skills**: shipping a service with real operational seams—**governed ML delivery** with automation for speed, **gates for risk**, and **observability for operations**—and owning the path from code and CI through GitOps and runtime behavior, not a single isolated tool or demo script.
+---
 
-## Roadmap / Next Steps
+## Layout
 
-- Expand policy packs (e.g. admission-aligned checks, SBOM gates, license policy).
-- Deeper integration between findings, ticketing, and merge request workflows.
-- SLO-driven alerting and runbooks wired to Grafana and on-call rotation.
-- Broader model lifecycle coverage (training job governance, artifact lineage) where applicable.
-- Continuous hardening of the secure dev environment and secrets integration patterns.
+| Path | Contents |
+|------|----------|
+| [`aegisml/`](aegisml/README.md) | `app/`, `tests/`, `docker/`, `k8s/`, `scripts/`, `policies/`, `knowledge_base/` |
+| [`.gitlab/ci/`](.gitlab/README.md) | Job YAML, variables (`PIP_AUDIT_STRICT`, `TRIVY_FAIL_ON_SEVERITY`, `POLICY_AGENT_PACKAGE`, …) |
+| `aegisml/docs/` | `architecture.md`, `production-readiness.md`, `engineering.md`, `roadmap.md` |
+
+---
+
+## Invariants
+
+- Verdict for bundled rules does not depend on embeddings or LLMs.
+- Metrics always on; traces and retrieval are optional extras.
+- Dependency/image scan failure is opt-in (`variables.yml` defaults).

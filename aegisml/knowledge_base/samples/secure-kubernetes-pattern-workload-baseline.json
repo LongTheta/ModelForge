@@ -1,0 +1,36 @@
+{
+  "id": "kb-k8s-pattern-workload-baseline-001",
+  "doc_type": "secure_kubernetes_pattern",
+  "title": "Kubernetes workload baseline: securityContext, probes, and resources",
+  "summary": "Reference Deployment shape combining non-root execution, health probes, and CPU/memory requests/limits for predictable operations.",
+  "body": "Apply this pattern to Deployments and similar workload controllers so deterministic policy checks (non-root, probes, resource limits) align with a single maintainable template. Prefer a shared base patch or Helm values over one-off edits per service.\n\nThe snippet below is illustrative: adjust images, names, and probe paths to your app. Keep `runAsNonRoot` and explicit `runAsUser` where your image supports it; set `readOnlyRootFilesystem` when the workload allows.",
+  "remediation": {
+    "steps": [
+      "Merge securityContext, liveness/readiness probes, and resources into the Pod template.",
+      "Validate with `kubectl apply --dry-run=server` before merge.",
+      "Re-run policy checks in CI after manifest changes."
+    ],
+    "example_manifest_snippet": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: app\nspec:\n  template:\n    spec:\n      securityContext:\n        runAsNonRoot: true\n        runAsUser: 65532\n      containers:\n        - name: app\n          image: registry.example/app@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n          securityContext:\n            allowPrivilegeEscalation: false\n            readOnlyRootFilesystem: true\n            capabilities:\n              drop: [\"ALL\"]\n          resources:\n            requests:\n              cpu: \"100m\"\n              memory: \"128Mi\"\n            limits:\n              cpu: \"500m\"\n              memory: \"512Mi\"\n          livenessProbe:\n            httpGet:\n              path: /healthz\n              port: 8080\n            initialDelaySeconds: 10\n          readinessProbe:\n            httpGet:\n              path: /ready\n              port: 8080",
+    "verification": "Confirm `policy_check.py` passes for the updated manifest; spot-check `kubectl describe pod` for probe and resource fields."
+  },
+  "compliance": {
+    "nist": [
+      {
+        "control_id": "CM-6",
+        "name": "Configuration Settings",
+        "discussion": "Baseline manifests encode approved configuration for workloads."
+      },
+      {
+        "control_id": "SC-7",
+        "name": "Boundary Protection",
+        "discussion": "Least-privilege container settings reduce blast radius at the workload boundary."
+      }
+    ]
+  },
+  "related_rules": ["require_non_root", "require_resource_limits", "require_readiness_probe", "require_liveness_probe", "require_image_digest"],
+  "filters": {
+    "finding_type": "kubernetes_workload",
+    "platform": "kubernetes",
+    "severity": "medium"
+  }
+}

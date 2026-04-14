@@ -1,15 +1,19 @@
-# Minimal Prometheus configuration for scraping AegisML.
-# Usage: prometheus --config.file=prometheus.yaml  (or merge this scrape_configs block into your server config).
+# Baseline Prometheus scrape config for AegisML.
 #
-# Metrics are exposed at http://<target>:8080/metrics (FastAPI + prometheus_client).
-# Kubernetes: align with Service annotations in aegisml/k8s/base/service.yaml (prometheus.io/scrape, port, path).
+# Usage (local):  prometheus --config.file=observability/prometheus.yaml
+# Production: merge the `scrape_configs` entries into your central Prometheus config.
+#
+# Application exposes OpenMetrics text at GET /metrics (prometheus_client).
+# Kubernetes: Service annotations in k8s/base/service.yaml (prometheus.io/scrape, port, path)
+# align with static targets or kubernetes_sd relabeling below.
 
 global:
   scrape_interval: 15s
+  scrape_timeout: 10s
   evaluation_interval: 15s
 
 scrape_configs:
-  # Static target — local dev, docker compose, or port-forward to a Pod.
+  # Static targets — local dev, Docker Compose, or kubectl port-forward to a Pod IP:8080.
   - job_name: aegisml
     metrics_path: /metrics
     scheme: http
@@ -17,24 +21,30 @@ scrape_configs:
       - targets:
           - localhost:8080
         labels:
+          cluster: local
           service: aegisml
           component: inference
 
-  # Optional: in-cluster Prometheus with kubernetes_sd_configs (uncomment and tune selectors).
-  # - job_name: aegisml-k8s
+  # Optional: in-cluster Prometheus using pod discovery + standard annotations.
+  # Uncomment and adjust namespaces / label selectors to match your Deployment.
+  # - job_name: aegisml-kubernetes
   #   metrics_path: /metrics
   #   kubernetes_sd_configs:
   #     - role: pod
   #       namespaces:
   #         names: [aegisml-dev, aegisml-prod]
   #   relabel_configs:
-  #     - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
-  #       regex: aegisml
-  #       action: keep
-  #     - source_labels: [__meta_kubernetes_pod_ip, __meta_kubernetes_pod_annotation_prometheus_io_port]
-  #       regex: (.+);(.+)
-  #       replacement: ${1}:${2}
-  #       target_label: __address__
   #     - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
   #       action: keep
   #       regex: true
+  #     - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+  #       action: replace
+  #       regex: ([^:]+)(?::\d+)?;(\d+)
+  #       replacement: $1:$2
+  #       target_label: __address__
+  #     - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+  #       action: replace
+  #       target_label: __metrics_path__
+  #       regex: (.+)
+  #     - action: labelmap
+  #       regex: __meta_kubernetes_pod_label_(.+)

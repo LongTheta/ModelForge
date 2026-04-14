@@ -11,10 +11,13 @@
     },
     "doc_type": {
       "type": "string",
+      "description": "Document class for predictable filtering and authoring workflows. CI/CD vs Kubernetes split keeps retrieval aligned with platform-specific findings.",
       "enum": [
         "policy_explanation",
         "remediation_example",
         "compliance_mapping",
+        "secure_cicd_pattern",
+        "secure_kubernetes_pattern",
         "secure_pipeline"
       ]
     },
@@ -81,7 +84,11 @@
       "properties": {
         "finding_type": { "type": "string" },
         "platform": { "type": "string" },
-        "severity": { "type": "string" }
+        "severity": { "type": "string" },
+        "source_type": {
+          "type": "string",
+          "description": "Corpus label for retrieval (e.g. knowledge_base); defaults at ingest if omitted"
+        }
       },
       "description": "Mapped to Chroma metadata for retrieval filters"
     }

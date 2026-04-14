@@ -20,6 +20,7 @@ variables:
   AEGISML_IMAGE_NAME: "aegisml"
   # Logical label for future environment promotion (deploy job not included yet)
   AEGISML_CI_ENVIRONMENT: "ci"
+  # Default false so new repos pass CI until dependency/image noise is triaged; enable on protected branches when ready.
   PIP_AUDIT_STRICT: "false"
   TRIVY_FAIL_ON_SEVERITY: "false"
   TRIVY_SEVERITY: "HIGH,CRITICAL"

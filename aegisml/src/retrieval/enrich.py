@@ -1,4 +1,17 @@
-"""Attach retrieval context to a policy finding (for explanations, not pass/fail)."""
+"""Retrieval-based enrichment for policy findings (explanations only; not pass/fail).
+
+**Integration contract** (used by ``scripts/policy_check.py`` and
+``scripts/enrich_review_result.py``):
+
+1. Run deterministic policy checks and build raw ``findings``.
+2. Compute ``verdict`` from those findings **before** calling this module.
+3. Call :func:`enrich_policy_payload` to attach ``explanation``,
+   ``compliance_mapping``, ``recommended_fix_summary``, and optional ``retrieval``.
+
+The knowledge base and vector search are best-effort and may vary by environment;
+they must not feed back into enforcement. Authoritative outcomes are the
+pre-enrichment severities and the ``verdict`` computed from them.
+"""
 
 from __future__ import annotations
 
@@ -6,7 +19,7 @@ import json
 import os
 from typing import Any
 
-from retrieval.index import FILTER_KEYS
+from retrieval.schemas import DEFAULT_KB_SOURCE_TYPE, FILTER_KEYS
 from retrieval.query import query_context
 
 
@@ -107,6 +120,8 @@ def _effective_where(finding: dict[str, Any]) -> dict[str, str]:
     sev = finding.get("severity")
     if "severity" not in where and isinstance(sev, str) and sev.strip():
         where["severity"] = sev.strip()
+    if "source_type" not in where:
+        where["source_type"] = DEFAULT_KB_SOURCE_TYPE
     return where
 
 
@@ -246,6 +261,7 @@ def _build_compliance_mapping(
             "rank": i + 1,
             "distance": c.get("distance"),
             "doc_type": meta.get("doc_type"),
+            "source_type": meta.get("source_type"),
         }
         nist = _parse_kb_json_list(meta.get("nist_refs"))
         fed = _parse_kb_json_list(meta.get("fedramp_refs"))

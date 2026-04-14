@@ -1,6 +1,6 @@
 {
   "uid": "aegisml-obs",
-  "title": "AegisML — minimal HTTP observability",
+  "title": "AegisML — HTTP & deployment (baseline)",
   "tags": ["aegisml", "prometheus"],
   "timezone": "browser",
   "schemaVersion": 39,
@@ -21,8 +21,8 @@
   "panels": [
     {
       "id": 1,
-      "title": "Request rate",
-      "description": "Sum of `rate(aegisml_http_requests_total[5m])` — all routes, all status codes.",
+      "title": "Request volume",
+      "description": "Total HTTP request rate across all routes (excludes scrape of /metrics).",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
@@ -42,7 +42,7 @@
     {
       "id": 2,
       "title": "Latency (p95)",
-      "description": "`histogram_quantile(0.95, …)` over `aegisml_http_request_duration_seconds_bucket` — HTTP middleware wall time.",
+      "description": "End-to-end HTTP handler time (middleware), 95th percentile.",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
@@ -61,8 +61,8 @@
     },
     {
       "id": 3,
-      "title": "Error rate (5xx share of requests)",
-      "description": "Ratio of 5xx responses to all requests. Alternative: `sum(rate(aegisml_http_errors_total{class=\"5xx\"}[5m])) / sum(rate(aegisml_http_requests_total[5m]))`.",
+      "title": "5xx share of traffic",
+      "description": "Fraction of responses with HTTP 5xx status (from request counter).",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
@@ -80,31 +80,31 @@
       "options": { "legend": { "displayMode": "list", "placement": "bottom" } }
     },
     {
-      "id": 6,
-      "title": "Replica process start (Unix)",
-      "description": "`aegisml_process_start_timestamp_seconds` — wall clock when this pod registered metrics (align with rollout / deploy markers).",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 16 },
+      "id": 4,
+      "title": "HTTP error events / s (4xx vs 5xx)",
+      "description": "Low-cardinality error counter from middleware (`aegisml_http_errors_total`).",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "targets": [
         {
           "refId": "A",
-          "expr": "aegisml_process_start_timestamp_seconds",
-          "instant": true
+          "expr": "sum(rate(aegisml_http_errors_total[5m])) by (class)",
+          "legendFormat": "{{class}}"
         }
       ],
       "fieldConfig": {
-        "defaults": { "unit": "none", "decimals": 0, "custom": { "align": "auto" } },
+        "defaults": { "unit": "ops", "custom": { "drawStyle": "line", "fillOpacity": 12 } },
         "overrides": []
       },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value" }
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } }
     },
     {
-      "id": 4,
-      "title": "Deployment identity (`aegisml_app_info`)",
-      "description": "Labels: `version`, `environment`, `git_commit`, `pod`, `namespace` (pod/namespace from Kubernetes downward API when set). Value is 1.",
+      "id": 5,
+      "title": "Deployment metadata (`aegisml_app_info`)",
+      "description": "Labels: service, version, environment, git_commit, pod, namespace. One row per scraped target/replica.",
       "type": "table",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "gridPos": { "h": 9, "w": 16, "x": 0, "y": 16 },
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "targets": [
         {
@@ -121,13 +121,33 @@
       "options": { "showHeader": true }
     },
     {
-      "id": 5,
-      "title": "SRE: deployment → performance",
+      "id": 6,
+      "title": "Process start (Unix time)",
+      "description": "When this replica registered metrics — compare across pods during rollouts.",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aegisml_process_start_timestamp_seconds",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "none", "decimals": 0, "custom": { "align": "auto" } },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value" }
+    },
+    {
+      "id": 7,
+      "title": "Notes",
       "type": "text",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "gridPos": { "h": 5, "w": 24, "x": 0, "y": 25 },
       "options": {
         "mode": "markdown",
-        "content": "**Correlate rollout to latency/errors**\n1. Note **process start** time (panel above) or log line `event=service_start` with the same `git_commit` / `version`.\n2. Compare **latency** and **error rate** before vs after that timestamp (Grafana time range or annotations from CI/CD).\n3. Use **`aegisml_app_info`** to confirm which **version / commit / environment / pod** is serving traffic (multi-replica: one series per pod).\n4. **Logs:** filter JSON fields `git_commit`, `pod_name`, `environment` — must match metrics for the same replica.\n\n| Metric | Meaning |\n|--------|---------|\n| `aegisml_http_requests_total` | Requests by `method`, `path`, `status` |\n| `aegisml_http_request_duration_seconds` | Latency histogram |\n| `aegisml_http_errors_total` | `4xx` / `5xx` counts |\n| `aegisml_app_info` | `version`, `environment`, `git_commit`, `pod`, `namespace` |\n| `aegisml_process_start_timestamp_seconds` | Start time for this process (per replica) |\n| `aegisml_predictions_*` | Inference |\n"
+        "content": "**Day-1 checks:** rising **5xx share** or **5xx events/s** → logs for that pod (`git_commit` / `pod_name` must match **`aegisml_app_info`**). **p95 latency** jump after **process start** → regression or load.\n\n**Identity:** HTTP series are not version-labeled (cardinality); use **`aegisml_app_info`** + structured logs for release correlation."
       }
     }
   ]

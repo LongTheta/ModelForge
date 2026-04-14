@@ -61,7 +61,7 @@ Container image: see `docker/Dockerfile` — slim Python base, non-root user, `t
 ### Observability
 
 - **Metrics**: Prometheus scrapes `/metrics` (histograms and counters prefixed `aegisml_*`). Sample scrape config and Grafana JSON live under `observability/`.
-- **Tracing**: set `OTEL_EXPORTER_OTLP_ENDPOINT` and install `[otel]`; service name via `OTEL_SERVICE_NAME` (see `app/observability/telemetry.py`).
+- **Tracing**: set `OTEL_EXPORTER_OTLP_ENDPOINT` and/or `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`, install `[otel]`. The HTTP exporter appends `/v1/traces` to the base URL when appropriate—do not pass a preconstructed endpoint into the exporter (see `app/observability/telemetry.py`). Service name follows `OTEL_SERVICE_NAME` / `AEGISML_*` via `get_deployment_meta()`.
 - **Logs**: structured startup line from `app/deployment.py`; correlate with `aegisml_app_info` labels in Prometheus.
 
 ## Boundaries

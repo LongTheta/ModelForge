@@ -8,23 +8,31 @@ HTTP RED-style signals (low-cardinality ``path`` labels for this API’s fixed r
 
 Scrapes of ``/metrics`` are not recorded (avoids self-inflating request/latency series).
 
-Optional OTLP tracing when ``OTEL_EXPORTER_OTLP_ENDPOINT`` is set and ``[otel]`` extras installed.
+Optional OTLP tracing when standard OTel env vars are set and ``[otel]`` extras are installed.
+Do **not** pass a raw ``OTEL_EXPORTER_OTLP_ENDPOINT`` into ``OTLPSpanExporter(endpoint=...)``:
+the HTTP exporter appends ``/v1/traces`` only when it reads the env itself; an explicit
+``endpoint`` argument is used as-is and breaks collectors that expect the default path.
 """
 
 from __future__ import annotations
 
+import atexit
 import logging
 import os
 import time
+from typing import Any
 
 from fastapi import FastAPI
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, Info, generate_latest
 from starlette.requests import Request
 from starlette.responses import Response
 
-from app.deployment import DeploymentMeta
+from app.deployment import DeploymentMeta, get_deployment_meta
 
 logger = logging.getLogger(__name__)
+
+_otel_tracer_provider: Any = None  # TracerProvider when OTLP enabled; shutdown flushes spans
+_otel_atexit_registered = False
 
 HTTP_REQUESTS = Counter(
     "aegisml_http_requests_total",
@@ -65,12 +73,20 @@ APP_INFO = Info(
 
 PROCESS_START = Gauge(
     "aegisml_process_start_timestamp_seconds",
-    "Unix time when this process registered deployment metadata (useful for rollout correlation per replica)",
+    "Unix time when this process registered deployment metadata (rollout correlation per replica)",
 )
 
 
 def _label_or_na(value: str) -> str:
     return value if value.strip() else "n/a"
+
+
+def _otlp_trace_export_configured() -> bool:
+    """True if env indicates OTLP HTTP trace export (standard OTel variables)."""
+    return bool(
+        os.getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "").strip()
+        or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "").strip()
+    )
 
 
 def set_deployment_metadata(meta: DeploymentMeta) -> None:
@@ -116,8 +132,8 @@ def setup_http_metrics(app: FastAPI) -> None:
 
 
 def setup_opentelemetry(app: FastAPI) -> None:
-    endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-    if not endpoint:
+    global _otel_tracer_provider, _otel_atexit_registered
+    if not _otlp_trace_export_configured():
         return
     try:
         from opentelemetry import trace
@@ -128,29 +144,37 @@ def setup_opentelemetry(app: FastAPI) -> None:
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
     except ImportError:
         logger.warning(
-            "OTEL_EXPORTER_OTLP_ENDPOINT set but OpenTelemetry is not installed; "
+            "OTLP trace export configured in env but OpenTelemetry is not installed; "
             'use pip install -e ".[otel]"'
         )
         return
 
-    meta_ver = os.getenv("AEGISML_VERSION", "0.2.0")
-    meta_env = os.getenv("AEGISML_ENVIRONMENT") or os.getenv("AEGISML_DEPLOYMENT", "local")
-    meta_sha = os.getenv("AEGISML_GIT_COMMIT") or os.getenv("CI_COMMIT_SHORT_SHA", "unknown")
-    pod = os.getenv("POD_NAME", "")
-    ns = os.getenv("POD_NAMESPACE", "")
+    meta = get_deployment_meta()
     attrs: dict[str, str] = {
-        "service.name": os.getenv("OTEL_SERVICE_NAME", "aegisml-inference"),
-        "service.version": meta_ver,
-        "deployment.environment": meta_env,
-        "git.commit.sha": meta_sha,
+        "service.name": meta.service_name,
+        "service.version": meta.version,
+        "deployment.environment": meta.environment,
+        "git.commit.sha": meta.git_commit_full,
     }
-    if pod:
-        attrs["k8s.pod.name"] = pod
-    if ns:
-        attrs["k8s.namespace.name"] = ns
+    if meta.pod_name:
+        attrs["k8s.pod.name"] = meta.pod_name
+    if meta.pod_namespace:
+        attrs["k8s.namespace.name"] = meta.pod_namespace
     resource = Resource.create(attrs)
     provider = TracerProvider(resource=resource)
-    provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=endpoint)))
+    # No ``endpoint=`` — exporter reads OTEL_EXPORTER_OTLP_* and appends /v1/traces to the base URL.
+    provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
     trace.set_tracer_provider(provider)
+    _otel_tracer_provider = provider
+    if not _otel_atexit_registered:
+        atexit.register(_shutdown_otel_tracer_provider)
+        _otel_atexit_registered = True
     FastAPIInstrumentor.instrument_app(app)
     logger.info("OpenTelemetry FastAPI instrumentation enabled")
+
+
+def _shutdown_otel_tracer_provider() -> None:
+    global _otel_tracer_provider
+    if _otel_tracer_provider is not None:
+        _otel_tracer_provider.shutdown()
+        _otel_tracer_provider = None

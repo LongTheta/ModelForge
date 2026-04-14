@@ -12,6 +12,7 @@
       "rank": 1,
       "distance": 0.18,
       "doc_type": "policy_explanation",
+      "source_type": "knowledge_base",
       "nist_controls": ["SI-7"]
     }
   ],
@@ -22,7 +23,8 @@
     "filters_inferred": {
       "finding_type": "kubernetes_workload",
       "platform": "kubernetes",
-      "severity": "high"
+      "severity": "high",
+      "source_type": "knowledge_base"
     },
     "contexts": [
       {
@@ -31,6 +33,7 @@
           "finding_type": "kubernetes_workload",
           "platform": "kubernetes",
           "severity": "high",
+          "source_type": "knowledge_base",
           "source_id": "policy-explanation-image-digest",
           "doc_type": "policy_explanation"
         },

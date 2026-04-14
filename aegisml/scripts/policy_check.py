@@ -2,6 +2,11 @@
 """
 Deterministic policy checks for CI (shift-left). Complements the optional
 AI DevSecOps Policy Enforcement Agent (see policies/policy-config.yaml and README).
+
+Pass/fail is computed only from raw findings (see ``main``). After that,
+``retrieval.enrich.enrich_policy_payload`` replaces ``findings`` with enriched
+rows; it does not change ``verdict``. If retrieval cannot be imported, stub
+enrichment fills the same explanation fields without a KB.
 """
 
 from __future__ import annotations

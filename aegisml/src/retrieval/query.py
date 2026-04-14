@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from retrieval.index import FILTER_KEYS, get_collection
+from retrieval.index import get_collection
+from retrieval.schemas import FILTER_KEYS
 
 
 def _normalize_where(filters: dict[str, str] | None) -> dict[str, Any] | None:
@@ -31,7 +32,7 @@ def query_context(
     """
     Return top-k similar chunks with distances and metadata.
 
-    `where` may include any subset of: finding_type, platform, severity.
+    `where` may include any subset of: finding_type, platform, severity, source_type.
     """
     coll = get_collection(collection_name)
     where_clause = _normalize_where(where)

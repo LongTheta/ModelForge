@@ -31,5 +31,5 @@ HTTP metrics stay **unlabeled by version** (low cardinality). Identity lives on 
 | `aegisml_http_requests_total` | Request rate; `method`, `path`, `status`. |
 | `aegisml_http_request_duration_seconds` | Latency histogram. |
 | `aegisml_http_errors_total` | `4xx` / `5xx`. |
-| `aegisml_app_info` | Deployment labels (version, environment, git, pod, namespace). |
+| `aegisml_app_info` | Deployment labels (`service`, version, environment, git, pod, namespace). |
 | `aegisml_process_start_timestamp_seconds` | Unix time at startup (per process). |

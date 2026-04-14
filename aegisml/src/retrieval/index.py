@@ -6,13 +6,14 @@ import os
 from functools import lru_cache
 from typing import TYPE_CHECKING
 
+from retrieval.schemas import FILTER_KEYS
+
 if TYPE_CHECKING:
     import chromadb
 
 DEFAULT_COLLECTION = "aegisml_policy_kb"
 
-# Metadata keys stored on every chunk (used for Chroma `where` filters).
-FILTER_KEYS = ("finding_type", "platform", "severity")
+__all__ = ["DEFAULT_COLLECTION", "FILTER_KEYS", "get_client", "get_collection", "persist_directory"]
 
 
 def persist_directory() -> str:

@@ -62,5 +62,7 @@ Writes `policy-findings.json` in this tree (gitignored). Exit non-zero on high/c
 
 ## Further reading
 
+- `docs/engineering.md` — maintainer expectations (correctness, security, docs)
 - `docs/architecture.md` — components, request path, dependencies, integration points
+- `docs/production-readiness.md` — probes, resources, CI gates, limitations
 - `docs/service.md` — HTTP surface and model lifecycle

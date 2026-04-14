@@ -7,7 +7,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from retrieval.index import FILTER_KEYS, get_collection
+from retrieval.index import get_collection
+from retrieval.schemas import DEFAULT_KB_SOURCE_TYPE, FILTER_KEYS
 from retrieval.ingest import _chunk_text
 
 
@@ -61,12 +62,15 @@ def kb_record_to_embedding_text(record: dict[str, Any]) -> str:
 def _metadata_for_kb_chunk(record: dict[str, Any], chunk_index: int) -> dict[str, Any]:
     """Chroma metadata: filter keys + document fields (values are str / bool / int / float only)."""
     filters = record["filters"]
+    st_raw = filters.get("source_type") if isinstance(filters.get("source_type"), str) else ""
+    source_type = st_raw.strip() if st_raw.strip() else DEFAULT_KB_SOURCE_TYPE
     meta: dict[str, Any] = {
         "source_id": record["id"],
         "chunk": str(chunk_index),
         FILTER_KEYS[0]: filters["finding_type"],
         FILTER_KEYS[1]: filters["platform"],
         FILTER_KEYS[2]: filters["severity"],
+        FILTER_KEYS[3]: source_type,
         "doc_type": record.get("doc_type", "policy_explanation"),
         "title": (record.get("title") or "")[:512],
     }

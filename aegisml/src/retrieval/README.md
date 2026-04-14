@@ -8,11 +8,12 @@ RAG-style **context for explanations only** — deterministic policy pass/fail i
 src/retrieval/
 ├── __init__.py      # Public exports
 ├── README.md        # This file
-├── index.py         # Chroma client, collection, FILTER_KEYS, persist path
-├── ingest.py        # Chunk + add documents with metadata (finding_type, platform, severity)
+├── schemas.py       # FILTER_KEYS, DEFAULT_KB_SOURCE_TYPE, TypedDict metadata shapes
+├── index.py         # Chroma client, collection, persist path (re-exports FILTER_KEYS)
+├── ingest.py        # Chunk + add documents with metadata
 ├── ingest_kb.py     # Optional: structured KB JSON → chunks (knowledge_base/samples)
 ├── query.py         # Similarity search + `where` metadata filters
-└── enrich.py        # Attach retrieval context to policy findings (policy_check / agents)
+└── enrich.py        # Attach retrieval context after findings exist (never changes verdict)
 ```
 
 **Vector store:** [Chroma](https://www.trychroma.com/) persistent SQLite under `AEGISML_CHROMA_PATH` (default `.chroma/aegisml`). A FAISS backend would replace `index.py` / collection calls while keeping the same `ingest` / `query` contracts.
@@ -26,6 +27,7 @@ Every indexed chunk stores:
 | `finding_type` | e.g. `kubernetes_workload`, `ci_security`, `secrets` |
 | `platform` | e.g. `kubernetes`, `gitlab_ci`, `general` |
 | `severity` | e.g. `high`, `medium`, `info` (align with policy findings) |
+| `source_type` | Corpus label, e.g. `knowledge_base` (default at ingest / enrich) |
 
 `query.py` builds Chroma `where` clauses (`$eq`, `$and`) from a subset of these keys so retrieval stays scoped to relevant KB slices.
 

@@ -6,7 +6,8 @@ import hashlib
 import re
 from pathlib import Path
 
-from retrieval.index import FILTER_KEYS, get_collection
+from retrieval.index import get_collection
+from retrieval.schemas import DEFAULT_KB_SOURCE_TYPE, FILTER_KEYS
 
 
 def _chunk_text(text: str, max_chars: int = 1200) -> list[str]:
@@ -35,11 +36,12 @@ def ingest_text(
     platform: str,
     severity: str,
     source_id: str,
+    source_type: str = DEFAULT_KB_SOURCE_TYPE,
     collection_name: str | None = None,
 ) -> list[str]:
     """
     Index one logical document split into chunks.
-    Metadata on every chunk enables query-time filters (finding_type, platform, severity).
+    Metadata on every chunk enables query-time filters (finding_type, platform, severity, source_type).
     """
     coll = get_collection(collection_name)
     chunks = _chunk_text(text)
@@ -57,6 +59,7 @@ def ingest_text(
                 FILTER_KEYS[0]: finding_type,
                 FILTER_KEYS[1]: platform,
                 FILTER_KEYS[2]: severity,
+                FILTER_KEYS[3]: source_type,
             }
         )
     if docs:
@@ -70,6 +73,7 @@ def ingest_path(
     finding_type: str = "general",
     platform: str = "any",
     severity: str = "info",
+    source_type: str = DEFAULT_KB_SOURCE_TYPE,
 ) -> list[str]:
     """Ingest a UTF-8 file (e.g. policy markdown, runbook)."""
     text = path.read_text(encoding="utf-8")
@@ -79,6 +83,7 @@ def ingest_path(
         platform=platform,
         severity=severity,
         source_id=str(path.resolve()),
+        source_type=source_type,
     )
 
 
@@ -98,6 +103,7 @@ def ingest_directory(
                 finding_type=meta.get("finding_type", "general"),
                 platform=meta.get("platform", "any"),
                 severity=meta.get("severity", "info"),
+                source_type=meta.get("source_type", DEFAULT_KB_SOURCE_TYPE),
             )
             n += 1
     return n

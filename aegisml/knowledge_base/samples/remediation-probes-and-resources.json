@@ -11,7 +11,7 @@
       "Set resources.requests and resources.limits for cpu and memory on every container.",
       "Re-run kubectl apply and confirm Ready replicas match desired."
     ],
-    "example_manifest_snippet": "resources:\n  requests:\n    cpu: \"100m\"\n    memory: \"128Mi\"\n  limits:\n    cpu: \"500m\"\n    memory: \"512Mi\"\nreadinessProbe:\n  httpGet:\n    path: /healthz\n    port: 8080\n  initialDelaySeconds: 5\nlivenessProbe:\n  httpGet:\n    path: /healthz\n    port: 8080\n  initialDelaySeconds: 15"
+    "example_manifest_snippet": "resources:\n  requests:\n    cpu: \"100m\"\n    memory: \"128Mi\"\n  limits:\n    cpu: \"500m\"\n    memory: \"512Mi\"\nreadinessProbe:\n  httpGet:\n    path: /readyz\n    port: 8080\n  initialDelaySeconds: 5\nlivenessProbe:\n  httpGet:\n    path: /healthz\n    port: 8080\n  initialDelaySeconds: 15"
   },
   "compliance": {
     "nist": [
