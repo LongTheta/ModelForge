@@ -1,0 +1,43 @@
+{
+  "id": "kb-k8s-no-latest-tag-001",
+  "doc_type": "remediation_example",
+  "title": "Replace :latest with immutable tags or digests",
+  "summary": "The :latest tag is a moving pointer; pin by digest or a dated/immutable tag for auditability.",
+  "body": "Registries resolve :latest to whatever image was most recently tagged, which can change silently. For production, reference an immutable tag (e.g. release semver) or @sha256:... so GitOps diffs and admission reviews refer to exact bytes.\n\nCI should fail merges that introduce :latest in production overlays; dev clusters may relax with explicit documentation.",
+  "remediation": {
+    "steps": [
+      "Choose a release tag or digest from your artifact registry after build.",
+      "Replace image: repo/app:latest with repo/app:v1.2.3 or repo/app@sha256:...",
+      "Reconcile Argo CD / kubectl apply and verify rollouts reference the new reference."
+    ],
+    "example_manifest_snippet": "containers:\n  - name: aegisml\n    image: registry.example.com/aegisml:v1.2.3\n    # preferred:\n    # image: registry.example.com/aegisml@sha256:abcdef...",
+    "verification": "grep -R ':latest' k8s/ and ensure production overlays have no matches."
+  },
+  "compliance": {
+    "nist": [
+      {
+        "control_id": "SA-10",
+        "name": "Developer Configuration Management",
+        "discussion": "Immutable references tie deployed software to approved builds."
+      },
+      {
+        "control_id": "SI-7",
+        "name": "Software, Firmware, and Information Integrity",
+        "discussion": "Prevents undetected substitution of workload images."
+      }
+    ],
+    "fedramp": [
+      {
+        "baseline": "Moderate",
+        "control": "CM-5 (Access Restrictions for Change)",
+        "notes": "Tie image changes to approved releases and change tickets."
+      }
+    ]
+  },
+  "related_rules": ["forbid_image_latest", "require_image_digest"],
+  "filters": {
+    "finding_type": "kubernetes_workload",
+    "platform": "kubernetes",
+    "severity": "high"
+  }
+}

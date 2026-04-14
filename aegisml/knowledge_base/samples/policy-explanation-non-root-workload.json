@@ -1,0 +1,43 @@
+{
+  "id": "kb-k8s-non-root-001",
+  "doc_type": "policy_explanation",
+  "title": "Non-root containers and pod securityContext",
+  "summary": "Running as non-root reduces blast radius if a workload is compromised and aligns with pod security standards.",
+  "body": "Processes that run as UID 0 inside the container can modify filesystems, install tooling, or exploit kernel interfaces available to privileged users. Production services should declare a non-zero runAsUser or rely on a restricted profile that sets runAsNonRoot: true at the pod level.\n\nPair with readOnlyRootFilesystem where feasible and drop Linux capabilities so even a compromised app has a minimal attack surface. AegisML flags manifests that lack explicit non-root enforcement on the baseline Deployment.",
+  "remediation": {
+    "steps": [
+      "Set pod.spec.securityContext.runAsNonRoot: true or runAsUser to a non-zero UID supported by your image.",
+      "Ensure the container image is built for that UID (USER directive or numeric user in OCI config).",
+      "Validate with kubectl exec and id; document exceptions in your risk register."
+    ],
+    "example_manifest_snippet": "securityContext:\n  runAsNonRoot: true\n  runAsUser: 65532\ncontainers:\n  - name: app\n    securityContext:\n      allowPrivilegeEscalation: false\n      readOnlyRootFilesystem: true",
+    "verification": "kubectl get pod -o jsonpath='{.items[*].spec.securityContext}' and container securityContext; confirm no privileged: true without approval."
+  },
+  "compliance": {
+    "nist": [
+      {
+        "control_id": "AC-6",
+        "name": "Least Privilege",
+        "discussion": "Workload identity should use the minimum privileges required."
+      },
+      {
+        "control_id": "CM-7",
+        "name": "Least Functionality",
+        "discussion": "Disable unnecessary capabilities and privileged modes."
+      }
+    ],
+    "fedramp": [
+      {
+        "baseline": "Moderate",
+        "control": "SC-4 (Information in Shared Resources) — process isolation",
+        "notes": "Non-root execution supports shared-cluster tenancy narratives in the SSP."
+      }
+    ]
+  },
+  "related_rules": ["require_non_root"],
+  "filters": {
+    "finding_type": "kubernetes_workload",
+    "platform": "kubernetes",
+    "severity": "high"
+  }
+}

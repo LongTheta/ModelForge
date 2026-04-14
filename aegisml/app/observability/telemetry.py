@@ -1,14 +1,4 @@
-"""
-Prometheus metrics (prometheus_client).
-
-- Request volume: ``aegisml_http_requests_total``{method, path, status}
-- Latency: ``aegisml_http_request_duration_seconds``{method, path} (histogram)
-- Error classes: ``aegisml_http_errors_total``{class} (4xx vs 5xx; for error-rate queries)
-- Deployment: ``aegisml_app_info`` labels version, environment, git_commit, pod, namespace;
-  ``aegisml_process_start_timestamp_seconds`` — Unix time when metadata was registered (per replica)
-
-Example error rate (5xx): ``sum(rate(aegisml_http_errors_total{class="5xx"}[5m])) / sum(rate(aegisml_http_requests_total[5m]))``
-"""
+"""Prometheus metrics (``prometheus_client``); optional OTLP tracing when OTEL packages are installed."""
 
 from __future__ import annotations
 

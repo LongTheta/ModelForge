@@ -41,7 +41,7 @@ def main() -> int:
 
     from retrieval.ingest_kb import ingest_kb_directory
 
-    n = ingest_kb_directory(root, glob="*.json", collection_name=args.collection)
+    n = ingest_kb_directory(root, glob="**/*.json", collection_name=args.collection)
     print(f"Ingested {n} knowledge base file(s) from {root}")
     return 0
 

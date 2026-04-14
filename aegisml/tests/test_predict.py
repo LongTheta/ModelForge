@@ -7,7 +7,7 @@ def test_predict_success(client: TestClient) -> None:
     body = r.json()
     assert body["label"] == "incident"
     assert body["confidence"] > 0.0
-    assert body["model_version"]
+    assert body["model_version"] == "ticket-triage-tfidf-2.0"
     scores = body["scores"]
     assert list(scores.keys()) == sorted(scores.keys())
     assert abs(sum(scores.values()) - 1.0) < 1e-5

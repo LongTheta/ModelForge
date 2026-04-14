@@ -1,4 +1,4 @@
-# Git / VCS
+# VCS / CI
 .git
 .github
 .gitlab-ci.yml
@@ -10,12 +10,13 @@ __pycache__
 .venv
 venv
 *.egg-info
+dist
+build
 .mypy_cache
 .pytest_cache
 .ruff_cache
 .coverage
 coverage.xml
-report.xml
 htmlcov
 
 # IDE / OS
@@ -24,7 +25,7 @@ htmlcov
 .DS_Store
 Thumbs.db
 
-# Not needed in the image (smaller context, faster CI)
+# Not required at runtime (smaller context, faster builds)
 tests
 docs
 k8s
@@ -35,14 +36,14 @@ examples
 knowledge_base
 docker-compose*.yml
 
-# Env and local secrets (never bake into images)
+# Secrets / local env (never bake into images)
 .env
 .env.*
 *.local
 
-# Generated / CI artifacts
+# CI / local outputs
 policy-findings.json
 *.log
 
-# Markdown and misc (runtime does not read these)
+# Docs not imported by the app
 *.md
