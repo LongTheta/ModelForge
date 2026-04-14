@@ -33,7 +33,7 @@ requirements.txt       # mirrors runtime + dev deps (see pyproject.toml for extr
 | **Config** | `Settings.from_env()` — no secrets in code; bind address and log level only at this layer. |
 | **Inference** | Eager load in lifespan (`ensure_loaded`); `readyz` reflects load state for kube probes. |
 | **Determinism** | Fixed `random_state` in training data fit; same binary → same predictions for same input. |
-| **Observability** | `prometheus_client` always on `/metrics`; OpenTelemetry only if `OTEL_EXPORTER_OTLP_ENDPOINT` is set and `pip install -e ".[otel]"`. |
+| **Observability** | `prometheus_client` on `/metrics` (request count, latency histogram, 4xx/5xx class); scrape path excluded from HTTP metrics. OTel traces only with `OTEL_EXPORTER_OTLP_ENDPOINT` + `pip install -e ".[otel]"`. |
 | **Errors** | Validation → 422 with stable `error.code`; inference failures → 500 with `InferenceError` code. |
 
 ## Endpoints

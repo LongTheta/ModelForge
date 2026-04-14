@@ -14,12 +14,13 @@ logger = logging.getLogger("aegisml")
 
 @dataclass(frozen=True)
 class DeploymentMeta:
-    """Fields used for metrics Info labels, structured logs, and OTel resource (where set)."""
+    """Fields used for metrics Info labels, structured logs, OTel resource, and /status."""
 
     version: str
     environment: str
     git_commit: str
     git_commit_full: str
+    service_name: str
     pod_name: str
     pod_namespace: str
 
@@ -43,11 +44,13 @@ def get_deployment_meta() -> DeploymentMeta:
     short = _short_sha(from_ci) if from_ci else (_short_sha(full) if full != "unknown" else "unknown")
     pod = os.getenv("POD_NAME", "")
     ns = os.getenv("POD_NAMESPACE", "")
+    svc = os.getenv("OTEL_SERVICE_NAME", "aegisml-inference")
     return DeploymentMeta(
         version=ver,
         environment=env,
         git_commit=short,
         git_commit_full=full,
+        service_name=svc,
         pod_name=pod,
         pod_namespace=ns,
     )
@@ -56,6 +59,7 @@ def get_deployment_meta() -> DeploymentMeta:
 def log_deployment_startup(meta: DeploymentMeta) -> None:
     payload = {
         "event": "service_start",
+        "service": meta.service_name,
         "version": meta.version,
         "environment": meta.environment,
         "git_commit": meta.git_commit,

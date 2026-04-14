@@ -1,5 +1,5 @@
 from app.schemas.errors import ErrorDetail, ErrorResponse
-from app.schemas.health import HealthResponse, ReadyResponse
+from app.schemas.health import HealthResponse, ReadyResponse, StatusResponse
 from app.schemas.predict import PredictRequest, PredictResponse
 
 __all__ = [
@@ -9,4 +9,5 @@ __all__ = [
     "PredictRequest",
     "PredictResponse",
     "ReadyResponse",
+    "StatusResponse",
 ]

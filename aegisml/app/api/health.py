@@ -3,8 +3,10 @@ from __future__ import annotations
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
+from app.deployment import get_deployment_meta
 from app.dependencies import ClassifierDep
-from app.schemas import HealthResponse, ReadyResponse
+from app.inference import get_classifier
+from app.schemas import HealthResponse, ReadyResponse, StatusResponse
 from app.schemas.errors import ErrorDetail, ErrorResponse
 from app.observability.telemetry import metrics_response
 
@@ -14,6 +16,25 @@ router = APIRouter(tags=["health"])
 @router.get("/healthz", response_model=HealthResponse)
 def healthz() -> HealthResponse:
     return HealthResponse(status="ok")
+
+
+@router.get("/status", response_model=StatusResponse)
+def status() -> StatusResponse:
+    meta = get_deployment_meta()
+    model_version: str | None = None
+    clf = get_classifier()
+    if clf.is_ready:
+        model_version = clf.model_version()
+    return StatusResponse(
+        version=meta.version,
+        environment=meta.environment,
+        git_commit=meta.git_commit,
+        git_commit_full=meta.git_commit_full,
+        service=meta.service_name,
+        model_version=model_version,
+        pod=meta.pod_name or None,
+        namespace=meta.pod_namespace or None,
+    )
 
 
 @router.get(

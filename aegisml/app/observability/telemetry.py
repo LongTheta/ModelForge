@@ -1,4 +1,15 @@
-"""Prometheus metrics (``prometheus_client``); optional OTLP tracing when OTEL packages are installed."""
+"""
+Prometheus text exposition on ``GET /metrics`` (``prometheus_client``).
+
+HTTP RED-style signals (low-cardinality ``path`` labels for this API’s fixed routes):
+  - ``aegisml_http_requests_total`` — Counter(method, path, status)
+  - ``aegisml_http_request_duration_seconds`` — Histogram(method, path)
+  - ``aegisml_http_errors_total`` — Counter(class) with class 4xx|5xx
+
+Scrapes of ``/metrics`` are not recorded (avoids self-inflating request/latency series).
+
+Optional OTLP tracing when ``OTEL_EXPORTER_OTLP_ENDPOINT`` is set and ``[otel]`` extras installed.
+"""
 
 from __future__ import annotations
 
@@ -66,6 +77,7 @@ def set_deployment_metadata(meta: DeploymentMeta) -> None:
     """Register once at startup: Info labels + process start time for SRE correlation."""
     APP_INFO.info(
         {
+            "service": meta.service_name,
             "version": meta.version,
             "environment": meta.environment,
             "git_commit": meta.git_commit,
@@ -84,6 +96,8 @@ def setup_http_metrics(app: FastAPI) -> None:
     @app.middleware("http")
     async def observe_http(request: Request, call_next):
         path = request.url.path
+        if path == "/metrics":
+            return await call_next(request)
         method = request.method
         start = time.perf_counter()
         status = 500
