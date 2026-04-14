@@ -1,0 +1,43 @@
+{
+  "severity": "high",
+  "rule": "require_image_digest",
+  "file": "aegisml/k8s/base/deployment.yaml",
+  "detail": "Container aegisml: image must include a digest (@sha256:...).",
+  "explanation": "Pin container images by digest so deployments are immutable and reproducible. Prefer @sha256:... over mutable tags.\n\nAdditional context: Reference your registry policy for approved base images.",
+  "compliance_mapping": [
+    {
+      "framework": "organizational_kb",
+      "control": "require_image_digest",
+      "knowledge_source": "policy-explanation-image-digest",
+      "rank": 1,
+      "distance": 0.18,
+      "doc_type": "policy_explanation",
+      "nist_controls": ["SI-7"]
+    }
+  ],
+  "recommended_fix_summary": "Replace the image reference with repo/image@sha256:<digest> from your approved supply chain.",
+  "retrieval": {
+    "available": true,
+    "query": "require_image_digest\naegisml/k8s/base/deployment.yaml\nContainer aegisml: image must include a digest (@sha256:...).",
+    "filters_inferred": {
+      "finding_type": "kubernetes_workload",
+      "platform": "kubernetes",
+      "severity": "high"
+    },
+    "contexts": [
+      {
+        "text": "Pin container images by digest (@sha256:...) for immutable deployments.",
+        "metadata": {
+          "finding_type": "kubernetes_workload",
+          "platform": "kubernetes",
+          "severity": "high",
+          "source_id": "policy-explanation-image-digest",
+          "doc_type": "policy_explanation"
+        },
+        "distance": 0.18
+      }
+    ],
+    "fallback_tier": "strict",
+    "disclaimer": "Retrieval augments explanations; policy verdicts remain deterministic."
+  }
+}

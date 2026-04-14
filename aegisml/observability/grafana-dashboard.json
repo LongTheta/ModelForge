@@ -1,0 +1,134 @@
+{
+  "uid": "aegisml-obs",
+  "title": "AegisML — minimal HTTP observability",
+  "tags": ["aegisml", "prometheus"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "DS_PROMETHEUS",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": { "selected": true, "text": "Prometheus", "value": "Prometheus" },
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Request rate",
+      "description": "Sum of `rate(aegisml_http_requests_total[5m])` — all routes, all status codes.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(aegisml_http_requests_total[5m]))",
+          "legendFormat": "req/s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 10 } },
+        "overrides": []
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } }
+    },
+    {
+      "id": 2,
+      "title": "Latency (p95)",
+      "description": "`histogram_quantile(0.95, …)` over `aegisml_http_request_duration_seconds_bucket` — HTTP middleware wall time.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum(rate(aegisml_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } },
+        "overrides": []
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } }
+    },
+    {
+      "id": 3,
+      "title": "Error rate (5xx share of requests)",
+      "description": "Ratio of 5xx responses to all requests. Alternative: `sum(rate(aegisml_http_errors_total{class=\"5xx\"}[5m])) / sum(rate(aegisml_http_requests_total[5m]))`.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(aegisml_http_requests_total{status=~\"5..\"}[5m])) / clamp_min(sum(rate(aegisml_http_requests_total[5m])), 1e-9)",
+          "legendFormat": "5xx_ratio"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "percentunit", "min": 0, "max": 1, "custom": { "drawStyle": "line", "fillOpacity": 15 } },
+        "overrides": []
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } }
+    },
+    {
+      "id": 6,
+      "title": "Replica process start (Unix)",
+      "description": "`aegisml_process_start_timestamp_seconds` — wall clock when this pod registered metrics (align with rollout / deploy markers).",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aegisml_process_start_timestamp_seconds",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "none", "decimals": 0, "custom": { "align": "auto" } },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value" }
+    },
+    {
+      "id": 4,
+      "title": "Deployment identity (`aegisml_app_info`)",
+      "description": "Labels: `version`, `environment`, `git_commit`, `pod`, `namespace` (pod/namespace from Kubernetes downward API when set). Value is 1.",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aegisml_app_info",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "auto", "inspect": false } },
+        "overrides": []
+      },
+      "options": { "showHeader": true }
+    },
+    {
+      "id": 5,
+      "title": "SRE: deployment → performance",
+      "type": "text",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "options": {
+        "mode": "markdown",
+        "content": "**Correlate rollout to latency/errors**\n1. Note **process start** time (panel above) or log line `event=service_start` with the same `git_commit` / `version`.\n2. Compare **latency** and **error rate** before vs after that timestamp (Grafana time range or annotations from CI/CD).\n3. Use **`aegisml_app_info`** to confirm which **version / commit / environment / pod** is serving traffic (multi-replica: one series per pod).\n4. **Logs:** filter JSON fields `git_commit`, `pod_name`, `environment` — must match metrics for the same replica.\n\n| Metric | Meaning |\n|--------|---------|\n| `aegisml_http_requests_total` | Requests by `method`, `path`, `status` |\n| `aegisml_http_request_duration_seconds` | Latency histogram |\n| `aegisml_http_errors_total` | `4xx` / `5xx` counts |\n| `aegisml_app_info` | `version`, `environment`, `git_commit`, `pod`, `namespace` |\n| `aegisml_process_start_timestamp_seconds` | Start time for this process (per replica) |\n| `aegisml_predictions_*` | Inference |\n"
+      }
+    }
+  ]
+}

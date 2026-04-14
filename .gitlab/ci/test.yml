@@ -1,0 +1,43 @@
+test:pytest:
+  extends: .python_aegisml
+  stage: test
+  needs:
+    - job: lint:ruff
+  script:
+    - |
+      python -m pytest tests/ -v --tb=short \
+        --junitxml=report.xml \
+        --cov=app \
+        --cov=src/retrieval \
+        --cov-report=term-missing \
+        --cov-report=xml:coverage.xml
+  coverage: '/TOTAL.*\s+(\d+\%)$/'
+  artifacts:
+    when: always
+    expire_in: 30 days
+    reports:
+      junit: aegisml/report.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: aegisml/coverage.xml
+    paths:
+      - aegisml/coverage.xml
+      - aegisml/report.xml
+
+test:kustomize:
+  stage: test
+  needs:
+    - job: lint:ruff
+  image: bitnami/kubectl:1.30
+  script:
+    - mkdir -p aegisml/.rendered
+    - kubectl kustomize aegisml/k8s/overlays/dev >aegisml/.rendered/dev.yaml
+    - kubectl kustomize aegisml/k8s/overlays/prod >aegisml/.rendered/prod.yaml
+    - kubectl apply --dry-run=client -f aegisml/.rendered/dev.yaml
+    - kubectl apply --dry-run=client -f aegisml/.rendered/prod.yaml
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - aegisml/.rendered/dev.yaml
+      - aegisml/.rendered/prod.yaml

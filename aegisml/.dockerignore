@@ -1,0 +1,48 @@
+# Git / VCS
+.git
+.github
+.gitlab-ci.yml
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+.venv
+venv
+*.egg-info
+.mypy_cache
+.pytest_cache
+.ruff_cache
+.coverage
+coverage.xml
+report.xml
+htmlcov
+
+# IDE / OS
+.idea
+.vscode
+.DS_Store
+Thumbs.db
+
+# Not needed in the image (smaller context, faster CI)
+tests
+docs
+k8s
+policies
+scripts
+observability
+examples
+knowledge_base
+docker-compose*.yml
+
+# Env and local secrets (never bake into images)
+.env
+.env.*
+*.local
+
+# Generated / CI artifacts
+policy-findings.json
+*.log
+
+# Markdown and misc (runtime does not read these)
+*.md

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aegisml-config
+data:
+  AEGISML_LOG_LEVEL: "info"
+  OTEL_SERVICE_NAME: "aegisml-inference"
+  # Prefer AEGISML_ENVIRONMENT for new configs; AEGISML_DEPLOYMENT still supported in code.
+  AEGISML_ENVIRONMENT: "kubernetes"
+  AEGISML_VERSION: "0.2.0"
+  # Short SHA for metrics/logs (optional overlay patch from CI). Full SHA: set AEGISML_GIT_COMMIT_FULL via CD.
+  # AEGISML_GIT_COMMIT: ""

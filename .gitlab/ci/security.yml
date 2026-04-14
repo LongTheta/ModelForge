@@ -1,0 +1,113 @@
+.security_static_rules:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+.security_post_build_rules:
+  rules:
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+security:pip-audit:
+  extends:
+    - .python_aegisml
+    - .security_static_rules
+  stage: security
+  needs:
+    - job: test:pytest
+  script:
+    - |
+      set +e
+      pip-audit --format json --output dependency-audit.json
+      AUDIT_RC=$?
+      set -e
+      if [ "$PIP_AUDIT_STRICT" = "true" ]; then
+        exit "$AUDIT_RC"
+      fi
+      exit 0
+  artifacts:
+    when: always
+    expire_in: 30 days
+    paths:
+      - aegisml/dependency-audit.json
+
+security:trivy-fs:
+  extends: .security_static_rules
+  stage: security
+  needs:
+    - job: test:pytest
+  image:
+    name: aquasec/trivy:0.58.0
+    entrypoint: [""]
+  script:
+    - |
+      FAIL_FLAG=""
+      if [ "$TRIVY_FAIL_ON_SEVERITY" = "true" ]; then
+        FAIL_FLAG="--exit-code 1"
+      else
+        FAIL_FLAG="--exit-code 0"
+      fi
+      trivy filesystem "$CI_PROJECT_DIR/aegisml" \
+        --severity "$TRIVY_SEVERITY" \
+        --format json \
+        --output "$CI_PROJECT_DIR/trivy-fs.json" \
+        $FAIL_FLAG
+  artifacts:
+    when: always
+    expire_in: 30 days
+    paths:
+      - trivy-fs.json
+
+security:trivy-image:
+  extends: .security_post_build_rules
+  stage: security
+  needs:
+    - job: build:kaniko
+  image:
+    name: aquasec/trivy:0.58.0
+    entrypoint: [""]
+  variables:
+    TRIVY_USERNAME: "$CI_REGISTRY_USER"
+    TRIVY_PASSWORD: "$CI_REGISTRY_PASSWORD"
+  script:
+    - |
+      FAIL_FLAG=""
+      if [ "$TRIVY_FAIL_ON_SEVERITY" = "true" ]; then
+        FAIL_FLAG="--exit-code 1"
+      else
+        FAIL_FLAG="--exit-code 0"
+      fi
+      IMG="${CI_REGISTRY_IMAGE}:${AEGISML_IMAGE_NAME}-${CI_COMMIT_SHORT_SHA}"
+      trivy image --severity "$TRIVY_SEVERITY" \
+        --format json \
+        --output "$CI_PROJECT_DIR/trivy-image.json" \
+        $FAIL_FLAG \
+        "$IMG"
+  artifacts:
+    when: always
+    expire_in: 30 days
+    paths:
+      - trivy-image.json
+
+security:policy:
+  extends: .python_aegisml
+  stage: security
+  needs:
+    - job: build:kaniko
+    - job: security:trivy-image
+    - job: test:kustomize
+    - job: security:pip-audit
+    - job: security:trivy-fs
+  before_script:
+    - cd aegisml
+    - python -m pip install --upgrade pip
+    - python -m pip install -e ".[dev,retrieval]"
+  script:
+    - python scripts/policy_check.py
+  artifacts:
+    when: always
+    expire_in: 30 days
+    paths:
+      - aegisml/policy-findings.json
+
+# AI DevSecOps Policy Enforcement Agent runs in stage policy_check (see policy_check.yml).

@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegisml.local/schema/kb-document.schema.json",
+  "title": "AegisML knowledge base document",
+  "type": "object",
+  "required": ["id", "doc_type", "filters", "body"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable identifier (e.g. kb-k8s-digest-001)"
+    },
+    "doc_type": {
+      "type": "string",
+      "enum": [
+        "policy_explanation",
+        "remediation_example",
+        "compliance_mapping",
+        "secure_pipeline"
+      ]
+    },
+    "title": { "type": "string" },
+    "summary": {
+      "type": "string",
+      "description": "Short abstract; copied into the embedding text before body"
+    },
+    "body": {
+      "type": "string",
+      "description": "Primary prose for retrieval (policy rationale, steps, narrative)"
+    },
+    "remediation": {
+      "type": "object",
+      "description": "Structured remediation; flattened into text at ingest",
+      "properties": {
+        "steps": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "example_manifest_snippet": { "type": "string" },
+        "verification": { "type": "string" }
+      }
+    },
+    "compliance": {
+      "type": "object",
+      "properties": {
+        "nist": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["control_id"],
+            "properties": {
+              "control_id": { "type": "string", "description": "e.g. SC-13, AC-2" },
+              "name": { "type": "string" },
+              "discussion": { "type": "string" }
+            }
+          }
+        },
+        "fedramp": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "baseline": {
+                "type": "string",
+                "enum": ["Low", "Moderate", "High"]
+              },
+              "control": { "type": "string" },
+              "notes": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "related_rules": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "policy_check.py rule names this entry helps explain"
+    },
+    "filters": {
+      "type": "object",
+      "required": ["finding_type", "platform", "severity"],
+      "properties": {
+        "finding_type": { "type": "string" },
+        "platform": { "type": "string" },
+        "severity": { "type": "string" }
+      },
+      "description": "Mapped to Chroma metadata for retrieval filters"
+    }
+  },
+  "additionalProperties": true
+}

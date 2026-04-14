@@ -1,0 +1,15 @@
+# Runtime (install: pip install -e .)
+fastapi>=0.109.0,<1.0
+uvicorn[standard]>=0.27.0,<1.0
+pydantic>=2.0,<3.0
+numpy>=1.24.0,<3.0
+scikit-learn>=1.3.0,<2.0
+prometheus-client>=0.19.0,<1.0
+
+# Dev / CI
+httpx>=0.26.0,<1.0
+pytest>=8.0.0,<9.0
+pytest-cov>=4.1.0,<7.0
+ruff>=0.8.0,<1.0
+pip-audit>=2.6.0,<3.0
+pyyaml>=6.0,<7.0

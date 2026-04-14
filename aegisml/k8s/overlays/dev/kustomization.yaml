@@ -1,0 +1,28 @@
+# Dev overlay — low cost, single replica, smaller requests/limits.
+# GitOps: point Argo CD / Flux at this path; promote to prod by merging to a branch
+# that tracks ../../overlays/prod (or separate repo path) with reviewed image tag + replicas.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: aegisml-dev
+
+commonAnnotations:
+  aegisml.io/gitops-overlay: dev
+
+resources:
+  - namespace.yaml
+  - ../../base
+
+replicas:
+  - name: aegisml-inference
+    count: 1
+
+patches:
+  - path: patch-deployment.yaml
+  - path: patch-service.yaml
+  - path: patch-configmap.yaml
+
+images:
+  - name: registry.example.com/aegisml
+    newName: registry.example.com/aegisml
+    newTag: aegisml-latest

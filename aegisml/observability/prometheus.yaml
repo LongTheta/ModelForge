@@ -1,0 +1,40 @@
+# Minimal Prometheus configuration for scraping AegisML.
+# Usage: prometheus --config.file=prometheus.yaml  (or merge this scrape_configs block into your server config).
+#
+# Metrics are exposed at http://<target>:8080/metrics (FastAPI + prometheus_client).
+# Kubernetes: align with Service annotations in aegisml/k8s/base/service.yaml (prometheus.io/scrape, port, path).
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Static target — local dev, docker compose, or port-forward to a Pod.
+  - job_name: aegisml
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets:
+          - localhost:8080
+        labels:
+          service: aegisml
+          component: inference
+
+  # Optional: in-cluster Prometheus with kubernetes_sd_configs (uncomment and tune selectors).
+  # - job_name: aegisml-k8s
+  #   metrics_path: /metrics
+  #   kubernetes_sd_configs:
+  #     - role: pod
+  #       namespaces:
+  #         names: [aegisml-dev, aegisml-prod]
+  #   relabel_configs:
+  #     - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+  #       regex: aegisml
+  #       action: keep
+  #     - source_labels: [__meta_kubernetes_pod_ip, __meta_kubernetes_pod_annotation_prometheus_io_port]
+  #       regex: (.+);(.+)
+  #       replacement: ${1}:${2}
+  #       target_label: __address__
+  #     - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+  #       action: keep
+  #       regex: true

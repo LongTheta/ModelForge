@@ -1,0 +1,42 @@
+{
+  "id": "kb-k8s-image-digest-001",
+  "doc_type": "policy_explanation",
+  "title": "Container image digests and deploy reproducibility",
+  "summary": "Pinning images by digest (@sha256:...) makes deployments byte-reproducible and supports supply-chain audit.",
+  "body": "Mutable tags like :latest identify a moving target: the image bytes behind the tag can change without a manifest edit. For production workloads, reference images by digest so that what you approved in CI is exactly what runs in the cluster. Pair digest pinning with your promotion process: build once, sign or attest, scan, then promote the digest through dev/stage/prod GitOps branches.\n\nAegisML's require_image_digest check flags container image fields that lack @sha256:... so teams catch drift before merge.",
+  "remediation": {
+    "steps": [
+      "Build and push the image; copy the registry digest (sha256:...) from the build output or registry UI.",
+      "Set image: registry/org/app@sha256:<digest> in the Deployment manifest.",
+      "If you must retain a human-readable tag for operators, document it in comments—not as the sole reference."
+    ],
+    "verification": "kubectl get deploy -o jsonpath='{.items[*].spec.template.spec.containers[*].image}' and confirm each value contains @sha256:"
+  },
+  "compliance": {
+    "nist": [
+      {
+        "control_id": "SC-13",
+        "name": "Cryptographic Protection",
+        "discussion": "Digest pinning supports integrity of software deployed to the platform."
+      },
+      {
+        "control_id": "SA-10",
+        "name": "Developer Configuration Management",
+        "discussion": "Immutable references align development artifacts with deployed state."
+      }
+    ],
+    "fedramp": [
+      {
+        "baseline": "Moderate",
+        "control": "CM-5 (Access Restrictions for Change) — operational change tied to approved artifacts",
+        "notes": "Digest-based promotion supports auditable change; map to your SSP narrative."
+      }
+    ]
+  },
+  "related_rules": ["require_image_digest", "forbid_image_latest"],
+  "filters": {
+    "finding_type": "kubernetes_workload",
+    "platform": "kubernetes",
+    "severity": "high"
+  }
+}

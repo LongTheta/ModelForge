@@ -1,0 +1,27 @@
+# Dev: environment labels, lighter CPU/memory for shared clusters.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aegisml-inference
+  labels:
+    environment: dev
+    version: "0.2.0"
+spec:
+  template:
+    metadata:
+      labels:
+        environment: dev
+        version: "0.2.0"
+    spec:
+      containers:
+        - name: inference
+          env:
+            - name: AEGISML_ENVIRONMENT
+              value: dev
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 384Mi

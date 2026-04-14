@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+coverage.xml
+report.xml
+htmlcov/
+
+# Type / lint
+.mypy_cache/
+.ruff_cache/
+
+# Local runtime / retrieval
+.chroma/
+.rendered/
+policy-findings.json
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store

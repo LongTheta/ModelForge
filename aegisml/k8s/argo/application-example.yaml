@@ -1,0 +1,19 @@
+# Example Argo CD Application — copy to your GitOps repo or adjust paths.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: aegisml-inference-dev
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://gitlab.com/your-group/your-repo.git
+    targetRevision: main
+    path: aegisml/k8s/overlays/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: aegisml-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

@@ -1,0 +1,17 @@
+# AegisML — GitLab CI/CD
+#
+# Stages: lint → test → build → security → policy_check
+# Modular includes: .gitlab/ci/ (see .gitlab/README.md).
+#
+# CI/CD variables (project settings):
+#   PIP_AUDIT_STRICT=true
+#   TRIVY_FAIL_ON_SEVERITY=true
+#   POLICY_AGENT_PACKAGE=<pip spec>  — enables policy_check:ai-devsecops (AI policy agent)
+
+include:
+  - local: ".gitlab/ci/variables.yml"
+  - local: ".gitlab/ci/lint.yml"
+  - local: ".gitlab/ci/test.yml"
+  - local: ".gitlab/ci/build.yml"
+  - local: ".gitlab/ci/security.yml"
+  - local: ".gitlab/ci/policy_check.yml"

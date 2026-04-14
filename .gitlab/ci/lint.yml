@@ -1,0 +1,6 @@
+lint:ruff:
+  extends: .python_aegisml
+  stage: lint
+  script:
+    - ruff check app src tests
+    - ruff format --check app src tests

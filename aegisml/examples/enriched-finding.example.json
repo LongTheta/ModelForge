@@ -1,0 +1,41 @@
+{
+  "severity": "high",
+  "rule": "require_image_digest",
+  "file": "aegisml/k8s/base/deployment.yaml",
+  "detail": "Container aegisml: image must include a digest (@sha256:...).",
+  "explanation": "Pin container images by digest so deployments are immutable and auditable. Prefer referencing @sha256:... in the image field and promote changes through your GitOps pipeline.\n\nAdditional context: Verify admission or CI rejects images without digests before they reach production.\n\n(Broader KB match tier: unfiltered.)",
+  "compliance_mapping": [
+    {
+      "framework": "organizational_kb",
+      "control": "require_image_digest",
+      "knowledge_source": "docs/container-supply-chain.md",
+      "rank": 1,
+      "distance": 0.18
+    }
+  ],
+  "recommended_fix_summary": "Set image to repo/app@sha256:<digest> and record the promotion in change management. Re-run policy check after updating manifests.",
+  "retrieval": {
+    "available": true,
+    "query": "require_image_digest\naegisml/k8s/base/deployment.yaml\nContainer aegisml: image must include a digest (@sha256:...).",
+    "filters_inferred": {
+      "finding_type": "kubernetes_workload",
+      "platform": "kubernetes",
+      "severity": "high"
+    },
+    "fallback_tier": "unfiltered",
+    "contexts": [
+      {
+        "text": "Example KB chunk text…",
+        "metadata": {
+          "source_id": "docs/container-supply-chain.md",
+          "chunk": "0",
+          "finding_type": "kubernetes_workload",
+          "platform": "kubernetes",
+          "severity": "high"
+        },
+        "distance": 0.18
+      }
+    ],
+    "disclaimer": "Retrieval augments explanations; policy verdicts remain deterministic."
+  }
+}

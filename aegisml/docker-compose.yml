@@ -1,0 +1,22 @@
+# Local smoke run (Phase 2). From `aegisml/`: docker compose up --build
+
+services:
+  inference:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        GIT_COMMIT: local
+        VERSION: "0.2.0-local"
+    image: aegisml:local
+    ports:
+      - "8080:8080"
+    environment:
+      AEGISML_LOG_LEVEL: info
+      AEGISML_ENVIRONMENT: local
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/healthz >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 35s

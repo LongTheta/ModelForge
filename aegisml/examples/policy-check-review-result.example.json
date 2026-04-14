@@ -1,0 +1,31 @@
+{
+  "verdict": "pass_with_warnings",
+  "summary": "Pipeline uses pinned tooling; GitOps manifests include probes and non-root defaults. Review medium findings before production.",
+  "findings": [
+    {
+      "id": "pipeline-001",
+      "title": "Example: ensure registry credentials are not logged",
+      "severity": "medium",
+      "category": "governance",
+      "description": "Illustrative finding only.",
+      "impacted_files": [".gitlab-ci.yml"],
+      "remediation_summary": "Use masked CI variables for registry passwords."
+    },
+    {
+      "id": "gitops-001",
+      "title": "Example: image tag should be immutable in production",
+      "severity": "high",
+      "category": "supply_chain",
+      "description": "Illustrative high-severity finding; a real run would fail the policy_check job.",
+      "impacted_files": ["aegisml/k8s/base/deployment.yaml"],
+      "remediation_summary": "Pin image by digest or use a promoted tag from CI."
+    }
+  ],
+  "policy_results": [],
+  "compliance_considerations": [],
+  "recommended_remediations": [],
+  "context": {},
+  "metadata": {
+    "note": "Example shape only; real output is produced by ai-devsecops-policy-enforcement-agent under artifacts/policy-check/review-result.json"
+  }
+}

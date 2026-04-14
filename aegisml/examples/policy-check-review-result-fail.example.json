@@ -1,0 +1,20 @@
+{
+  "verdict": "fail",
+  "summary": "High-severity issues in pipeline or Kubernetes manifests must be resolved before merge.",
+  "findings": [
+    {
+      "id": "example-high",
+      "title": "Example: policy violation (high)",
+      "severity": "high",
+      "category": "supply_chain",
+      "description": "Illustrative only — this shape causes the policy_check job to exit non-zero.",
+      "impacted_files": ["aegisml/k8s/base/deployment.yaml"],
+      "remediation_summary": "Apply the suggested fix from the agent or your policy pack."
+    }
+  ],
+  "policy_results": [],
+  "compliance_considerations": [],
+  "recommended_remediations": [],
+  "context": {},
+  "metadata": {}
+}

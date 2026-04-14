@@ -1,0 +1,42 @@
+{
+  "id": "kb-pipeline-gitlab-secure-001",
+  "doc_type": "secure_pipeline",
+  "title": "Secure GitLab CI pattern for build and deploy",
+  "summary": "Reference pipeline structure: protected variables, no inline secrets, artifact signing hooks.",
+  "body": "A secure pipeline separates build, test, scan, and deploy stages. Use protected CI variables for registry credentials and deployment tokens; never echo secrets in script output. Pin base images by digest in Dockerfile FROM lines where possible.\n\nAdd SAST/dependency scanning stages ahead of container build. For GitOps, the deploy job should only apply manifests that passed policy checks and image digest rules—matching AegisML deterministic checks in merge requests.",
+  "remediation": {
+    "steps": [
+      "Define stages: lint, test, build, scan, publish, deploy.",
+      "Use only CI variables or vault integration for REGISTRY_USER, REGISTRY_PASSWORD, KUBE_TOKEN.",
+      "Fail the pipeline if policy_check.py or equivalent exits non-zero."
+    ],
+    "example_manifest_snippet": "stages:\n  - test\n  - policy\n  - build\npolicy_check:\n  stage: policy\n  script:\n    - cd aegisml && python scripts/policy_check.py\n  rules:\n    - if: $CI_PIPELINE_SOURCE == \"merge_request_event\""
+  },
+  "compliance": {
+    "nist": [
+      {
+        "control_id": "SA-8",
+        "name": "Security and Privacy Engineering Principles",
+        "discussion": "Shift-left validation embeds security into the engineering process."
+      },
+      {
+        "control_id": "SI-10",
+        "name": "Information Input Validation",
+        "discussion": "Pipeline gates validate inputs (code, config) before promotion."
+      }
+    ],
+    "fedramp": [
+      {
+        "baseline": "Moderate",
+        "control": "CA-2 (Control Assessments) — automated checks as part of CD",
+        "notes": "Document MR policy checks as continuous assessment evidence where applicable."
+      }
+    ]
+  },
+  "related_rules": ["forbid_plaintext_password_in_gitlab_ci"],
+  "filters": {
+    "finding_type": "ci_security",
+    "platform": "gitlab_ci",
+    "severity": "high"
+  }
+}

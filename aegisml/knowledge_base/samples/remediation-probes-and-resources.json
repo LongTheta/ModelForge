@@ -1,0 +1,42 @@
+{
+  "id": "kb-k8s-probes-resources-001",
+  "doc_type": "remediation_example",
+  "title": "Readiness, liveness, and resource requests/limits",
+  "summary": "Concrete YAML patterns for probes and resources that satisfy baseline Kubernetes policy.",
+  "body": "Health probes let the kubelet attach routing and restart policy to application readiness. Resource requests enable scheduling; limits cap noisy-neighbor risk. Together they are required for predictable operations.\n\nDefine probes with timeouts and thresholds appropriate to your SLOs. Avoid copying generic 1s/1s values from tutorials without validating against startup time.",
+  "remediation": {
+    "steps": [
+      "Under spec.template.spec.containers[].readinessProbe, set httpGet or exec with initialDelaySeconds tuned to cold-start.",
+      "Add livenessProbe with stricter failure thresholds than readiness where appropriate.",
+      "Set resources.requests and resources.limits for cpu and memory on every container.",
+      "Re-run kubectl apply and confirm Ready replicas match desired."
+    ],
+    "example_manifest_snippet": "resources:\n  requests:\n    cpu: \"100m\"\n    memory: \"128Mi\"\n  limits:\n    cpu: \"500m\"\n    memory: \"512Mi\"\nreadinessProbe:\n  httpGet:\n    path: /healthz\n    port: 8080\n  initialDelaySeconds: 5\nlivenessProbe:\n  httpGet:\n    path: /healthz\n    port: 8080\n  initialDelaySeconds: 15"
+  },
+  "compliance": {
+    "nist": [
+      {
+        "control_id": "CP-2",
+        "name": "Contingency Plan",
+        "discussion": "Probes support controlled failover and recovery behaviors."
+      }
+    ],
+    "fedramp": [
+      {
+        "baseline": "Moderate",
+        "control": "SI-4 (System Monitoring) — workload signals for availability",
+        "notes": "Map probe failures to monitoring/alerting in the SSP."
+      }
+    ]
+  },
+  "related_rules": [
+    "require_readiness_probe",
+    "require_liveness_probe",
+    "require_resource_limits"
+  ],
+  "filters": {
+    "finding_type": "kubernetes_workload",
+    "platform": "kubernetes",
+    "severity": "high"
+  }
+}
