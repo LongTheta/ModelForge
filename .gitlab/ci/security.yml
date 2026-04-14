@@ -93,11 +93,8 @@ security:policy:
   extends: .python_aegisml
   stage: security
   needs:
-    - job: build:kaniko
-    - job: security:trivy-image
+    - job: test:pytest
     - job: test:kustomize
-    - job: security:pip-audit
-    - job: security:trivy-fs
   before_script:
     - cd aegisml
     - python -m pip install --upgrade pip

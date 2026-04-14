@@ -5,4 +5,3 @@ metadata:
   labels:
     app.kubernetes.io/name: aegisml
     app.kubernetes.io/part-of: aegisml
-    environment: prod

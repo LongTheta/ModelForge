@@ -1,4 +1,4 @@
-# Workflow rules, stages, pip cache, and shared Python install template.
+# Workflow, stages, shared cache, and anchors used by job YAML under .gitlab/ci/.
 
 workflow:
   rules:
@@ -16,13 +16,14 @@ stages:
 variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
   AEGISML_DIR: "$CI_PROJECT_DIR/aegisml"
-  # Image tag prefix for Kaniko destinations (future: map to env promotion)
+  # Image naming: ${CI_REGISTRY_IMAGE}:${AEGISML_IMAGE_NAME}-${CI_COMMIT_SHORT_SHA} (+ -latest)
   AEGISML_IMAGE_NAME: "aegisml"
+  # Logical label for future environment promotion (deploy job not included yet)
+  AEGISML_CI_ENVIRONMENT: "ci"
   PIP_AUDIT_STRICT: "false"
   TRIVY_FAIL_ON_SEVERITY: "false"
   TRIVY_SEVERITY: "HIGH,CRITICAL"
   TRIVY_NO_PROGRESS: "true"
-  # policy_check: set POLICY_AGENT_PACKAGE in GitLab UI to enable ai-devsecops agent (pip spec).
 
 cache:
   key:

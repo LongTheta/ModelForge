@@ -1,23 +1,13 @@
-# Prod: environment labels, scaled resources (tune or add HPA for autoscaling).
+# Resource profile for prod (capacity; add HPA later if needed).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: aegisml-inference
-  labels:
-    environment: prod
-    version: "0.2.0"
 spec:
   template:
-    metadata:
-      labels:
-        environment: prod
-        version: "0.2.0"
     spec:
       containers:
         - name: inference
-          env:
-            - name: AEGISML_ENVIRONMENT
-              value: prod
           resources:
             requests:
               cpu: 250m

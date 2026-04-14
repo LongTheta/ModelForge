@@ -4,3 +4,4 @@ metadata:
   name: aegisml-config
 data:
   AEGISML_ENVIRONMENT: dev
+  AEGISML_LOG_LEVEL: info

@@ -1,10 +1,14 @@
-# policy_check — AI DevSecOps Policy Enforcement Agent (review-all).
-# Inputs:
-#   --pipeline  → repo-root .gitlab-ci.yml
-#   --gitops    → aegisml/k8s (base + overlays + Argo examples)
-# Artifacts (under artifacts/policy-check/):
-#   review-result.json, policy-check-summary.md (+ agent-native files such as report.md when emitted)
-# Enable: set CI/CD variable POLICY_AGENT_PACKAGE (pip spec: PyPI name, package==ver, or git URL).
+# policy_check — ai-devsecops-policy-enforcement-agent (review-all).
+# Isolated module: change only this file + aegisml/scripts/policy_agent_gate.py for gate logic.
+#
+# Inputs (agent):
+#   --pipeline  repo-root .gitlab-ci.yml
+#   --gitops    aegisml/k8s (base + overlays)
+#
+# Artifacts: artifacts/policy-check/ (see aegisml/examples/policy-check-artifact-layout.txt)
+#
+# Enable: CI/CD variable POLICY_AGENT_PACKAGE (pip install spec for the agent package).
+# Optional: POLICY_CHECK_FAIL_SEVERITIES (default: high,critical) — pipe-separated list for gate.
 
 .policy_check_rules:
   rules:
@@ -51,31 +55,7 @@ policy_check:ai-devsecops:
       elif [ -f "${CI_PROJECT_DIR}/artifacts/policy-check/report.md" ]; then
         sed -n '1,120p' "${CI_PROJECT_DIR}/artifacts/policy-check/report.md"
       fi
-    - |
-      python << 'PY'
-      import json
-      import os
-      import pathlib
-      import sys
-
-      base = pathlib.Path(os.environ.get("CI_PROJECT_DIR", "."))
-      p = base / "artifacts/policy-check/review-result.json"
-      if not p.is_file():
-          print(f"ERROR: missing {p}", file=sys.stderr)
-          sys.exit(1)
-      data = json.loads(p.read_text(encoding="utf-8"))
-      verdict = data.get("verdict", "")
-      findings = data.get("findings") or []
-      bad = [f for f in findings if f.get("severity") in ("high", "critical")]
-      print(f"verdict={verdict!r} high_or_critical_findings={len(bad)}")
-      for f in bad[:20]:
-          print(f"  - [{f.get('severity')}] {f.get('title', f.get('id', '?'))}")
-      if verdict == "fail" or bad:
-          print("policy_check: FAIL (verdict=fail and/or high/critical findings)", file=sys.stderr)
-          sys.exit(1)
-      print("policy_check: PASS (no high/critical findings, verdict not fail)")
-      sys.exit(0)
-      PY
+    - python "${CI_PROJECT_DIR}/aegisml/scripts/policy_agent_gate.py"
   artifacts:
     when: always
     expire_in: 30 days

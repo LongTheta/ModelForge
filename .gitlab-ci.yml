@@ -1,12 +1,18 @@
 # AegisML — GitLab CI/CD
 #
-# Stages: lint → test → build → security → policy_check
-# Modular includes: .gitlab/ci/ (see .gitlab/README.md).
+# Stages:
+#   lint          Ruff
+#   test          Pytest + kustomize dry-run
+#   build         Kaniko image → registry
+#   security      pip-audit, Trivy, deterministic aegisml policy script
+#   policy_check  ai-devsecops-policy-enforcement-agent on .gitlab-ci.yml + aegisml/k8s
+#                 (job runs when POLICY_AGENT_PACKAGE is set — see .gitlab/ci/policy_check.yml)
 #
-# CI/CD variables (project settings):
-#   PIP_AUDIT_STRICT=true
-#   TRIVY_FAIL_ON_SEVERITY=true
-#   POLICY_AGENT_PACKAGE=<pip spec>  — enables policy_check:ai-devsecops (AI policy agent)
+# Policy gate: fails on verdict=fail or findings with severity in POLICY_CHECK_FAIL_SEVERITIES
+# (default high,critical). Artifacts: artifacts/policy-check/
+#
+# Other CI variables:
+#   PIP_AUDIT_STRICT, TRIVY_FAIL_ON_SEVERITY — see .gitlab/ci/security.yml
 
 include:
   - local: ".gitlab/ci/variables.yml"

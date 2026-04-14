@@ -1,79 +1,53 @@
 # =============================================================================
-# AegisML — policy configuration (deterministic checks)
-# Path (repo): aegisml/policies/policy-config.yaml
-# Consumed by: scripts/policy_check.py (CI: security:policy job)
-# External agents (e.g. AI DevSecOps) may read this file for rule intent.
-#
-# Requirement → keys (see comments under rules:):
-#   Unpinned images      → kubernetes.forbid_image_latest [+ optional require_image_digest]
-#   Plaintext secrets    → ci.forbid_plaintext_password_in_gitlab_ci, secrets.plaintext_secrets.*
-#   Resource limits      → kubernetes.require_resource_limits
-#   Readiness / liveness → kubernetes.require_readiness_probe, require_liveness_probe
+# AegisML — deterministic policy configuration
+# Path: aegisml/policies/policy-config.yaml
+# Consumer: aegisml/scripts/policy_check.py (CI: security:policy)
 # =============================================================================
 version: 1
 
 metadata:
-  name: aegisml-baseline
+  name: aegisml-production-baseline
   description: >
-    Initial policy for supply-chain hygiene (pinned images), secret safety in config
-    files, workload resource guarantees, and Kubernetes health probes.
-
-# -----------------------------------------------------------------------------
-# Rules map to implementations in scripts/policy_check.py (rules.kubernetes.*,
-# rules.ci.*, rules.secrets.*).
-# -----------------------------------------------------------------------------
+    Baseline for image pinning, secret hygiene, workload resources, health probes,
+    and GitLab CI credential handling. Tune per environment; enable digest pinning
+    when your pipeline promotes immutable references.
 
 rules:
   kubernetes:
-    # -- Unpinned / mutable container images (supply chain) --------------------
-    #
-    # forbid_image_latest: Detects the literal tag ":latest" in k8s YAML under
-    #   aegisml/k8s/. That tag is mutable at the registry; deployments are not
-    #   reproducible across time. Prefer an immutable tag or digest.
+    # --- Unpinned / mutable images (supply chain & rollbacks) -----------------
+    # :latest moves in the registry; replicas may run different bytes over time.
     forbid_image_latest: true
 
-    # require_image_digest: When true, every container image in a full Deployment
-    #   document must include @sha256:... . Strongest pin; enable for production
-    #   promotion once your pipeline pushes digest-pinned references.
+    # Require @sha256:... on every container image in full Deployments. Strongest
+    # guarantee; enable after CI publishes digest-pinned references.
     require_image_digest: false
 
-    # -- Pod identity / privilege (defense in depth) ---------------------------
-    #
-    # require_non_root: Ensures base deployment expresses non-root execution
-    #   (runAsNonRoot / runAsUser) in aegisml/k8s/base/deployment.yaml .
+    # --- Process identity (blast radius if a container is compromised) --------
     require_non_root: true
 
-    # -- Resource limits (scheduling, noisy-neighbor, capacity planning) -------
-    #
-    # require_resource_limits: Every container in every *full* Deployment
-    #   (documents with spec.selector) must have resources.requests and
-    #   resources.limits for both cpu and memory. Patch-only YAML files are skipped.
+    # --- Capacity & SLOs (scheduling, noisy-neighbor, quota planning) ---------
     require_resource_limits: true
 
-    # -- Health probes (rollouts, load balancing, crash detection) ------------
-    #
-    # require_readiness_probe: Each container must define readinessProbe so
-    #   Services do not send traffic until the app (and model) is ready.
+    # --- Traffic & restart behavior (safe rollouts, failed pod replacement) --
     require_readiness_probe: true
-
-    # require_liveness_probe: Each container must define livenessProbe so the
-    #   kubelet can restart failing processes without relying on readiness alone.
     require_liveness_probe: true
 
   ci:
-    # -- Plaintext secrets in GitLab CI ----------------------------------------
-    #
-    # forbid_plaintext_password_in_gitlab_ci: Flags obvious inline password:
-    #   assignments in .gitlab-ci.yml (e.g. password: "secret"). Prefer CI/CD
-    #   masked variables, files:, or a secrets manager—not literals in git.
+    # --- GitLab CI: inline credentials (enforced) ---------------------------
+    # Literal passwords in YAML end up in git history and job logs; use CI/CD
+    # variables (masked/protected), OIDC, or a vault integration.
     forbid_plaintext_password_in_gitlab_ci: true
 
+    # --- Review guidance (not evaluated by policy_check.py) -----------------
+    # Use in MR review and for future automated rules. Keeps policy intent in-repo.
+    recommendations:
+      - Prefer Kaniko or buildah over Docker-in-Docker with privileged runners unless required.
+      - Scope registry and cloud credentials to protected branches / environments.
+      - Avoid echoing secrets in script: blocks; use masked variables and short-lived tokens.
+      - Pin third-party CI images by digest or immutable tag where feasible.
+
   secrets:
-    # -- Pattern-based secret leakage in selected files -------------------------
-    #
-    # plaintext_secrets.enabled: When true, scan listed globs for regex patterns
-    #   below. Tuned paths limit noise; extend scan_under_* if you add manifests
-    #   outside k8s/ or root CI files.
+    # --- Pattern scans on selected paths (enforced) ---------------------------
     plaintext_secrets:
       enabled: true
       scan_under_aegisml:
@@ -82,17 +56,14 @@ rules:
       scan_under_repo_root:
         - .gitlab-ci.yml
       patterns:
-        # AWS access key IDs (often paired with secret keys; rotate if found).
         - name: aws_access_key_id
           regex: "AKIA[0-9A-Z]{16}"
           severity: critical
 
-        # Inline assignment of long quoted secret-like values (heuristic).
         - name: inline_secret_assignment
           regex: "(?i)(password|apikey|api_key|secret|token)\\s*[:=]\\s*[\"'][^$%][^\"']{12,}[\"']"
           severity: high
 
-        # PEM private key material must never live in repo config.
         - name: pem_private_key_block
           regex: "-----BEGIN [A-Z ]*PRIVATE KEY-----"
           severity: critical

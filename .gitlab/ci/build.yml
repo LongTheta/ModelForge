@@ -24,6 +24,7 @@ build:kaniko:
     - |
       VERSION="${CI_COMMIT_TAG:-$CI_COMMIT_SHORT_SHA}"
       TAG="${AEGISML_IMAGE_NAME}-${CI_COMMIT_SHORT_SHA}"
+      DIGEST_FILE="${CI_PROJECT_DIR}/aegisml/image.digest"
       /kaniko/executor
       --context "${CI_PROJECT_DIR}/aegisml"
       --dockerfile "${CI_PROJECT_DIR}/aegisml/docker/Dockerfile"
@@ -31,6 +32,13 @@ build:kaniko:
       --build-arg "VERSION=${VERSION}"
       --destination "${CI_REGISTRY_IMAGE}:${TAG}"
       --destination "${CI_REGISTRY_IMAGE}:${AEGISML_IMAGE_NAME}-latest"
+      --digest-file "${DIGEST_FILE}"
       --label "org.opencontainers.image.revision=${CI_COMMIT_SHA}"
       --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
       --label "org.opencontainers.image.version=${VERSION}"
+      --label "ci.environment=${AEGISML_CI_ENVIRONMENT}"
+  artifacts:
+    when: always
+    expire_in: 30 days
+    paths:
+      - aegisml/image.digest

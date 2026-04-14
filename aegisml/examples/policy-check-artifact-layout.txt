@@ -1,0 +1,13 @@
+# Example layout under artifacts/policy-check/ after policy_check:ai-devsecops
+#
+# review-result.json          — machine-readable verdict + findings (agent output;
+#                               may be updated in-place by enrich_review_result.py)
+# policy-check-summary.md     — human-readable summary (--markdown-out)
+# report.md                   — optional; some agent versions emit this instead of/in addition
+#
+# Typical review-result.json shape: see policy-check-review-result.example.json
+
+artifacts/policy-check/
+  review-result.json
+  policy-check-summary.md
+  report.md                    # optional

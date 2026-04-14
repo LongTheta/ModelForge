@@ -1,30 +1,28 @@
-# Prod overlay — HA (2+ replicas), higher resources, stricter promotion.
-# GitOps: same manifests as dev, different overlay path + image tag; promotion = MR/PR
-# updating prod/kustomization.yaml (replicas, newTag) after dev validation.
+# Prod: HA replicas, higher resources; pin image tag/digest in CI/GitOps.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 namespace: aegisml-prod
 
+commonLabels:
+  environment: prod
+
 commonAnnotations:
-  aegisml.io/gitops-overlay: prod
+  aegisml.io/environment: prod
 
 resources:
   - namespace.yaml
   - ../../base
 
 replicas:
-  # Minimum HA; increase (or add HPA) after capacity review.
   - name: aegisml-inference
     count: 2
 
 patches:
   - path: patch-deployment.yaml
-  - path: patch-service.yaml
   - path: patch-configmap.yaml
 
 images:
   - name: registry.example.com/aegisml
     newName: registry.example.com/aegisml
-    # Pin to digest or immutable tag in real pipelines (CI pushes aegisml-<sha>).
     newTag: aegisml-stable
