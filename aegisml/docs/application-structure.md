@@ -41,6 +41,7 @@ requirements.txt       # mirrors runtime + dev deps (see pyproject.toml for extr
 | Method | Path | Purpose |
 |--------|------|---------|
 | GET | `/healthz` | Liveness: process up (no model check). |
+| GET | `/status` | Version, environment, Git SHA, service name, model version, pod/namespace (ops metadata). |
 | GET | `/readyz` | Readiness: model loaded; 503 until `ensure_loaded` completes. |
 | GET | `/metrics` | Prometheus text exposition. |
 | POST | `/predict` | JSON `{ "text": "..." }` → label + probabilities. |

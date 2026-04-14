@@ -8,6 +8,7 @@ import os
 from dataclasses import dataclass
 
 from app import __version__
+from app.config import get_settings
 
 logger = logging.getLogger("aegisml")
 
@@ -32,8 +33,9 @@ def _short_sha(raw: str) -> str:
 
 
 def get_deployment_meta() -> DeploymentMeta:
+    settings = get_settings()
     ver = os.getenv("AEGISML_VERSION") or __version__
-    env = os.getenv("AEGISML_ENVIRONMENT") or os.getenv("AEGISML_DEPLOYMENT", "local")
+    env = settings.environment
     from_ci = (
         os.getenv("AEGISML_GIT_COMMIT")
         or os.getenv("CI_COMMIT_SHORT_SHA")
@@ -44,13 +46,12 @@ def get_deployment_meta() -> DeploymentMeta:
     short = _short_sha(from_ci) if from_ci else (_short_sha(full) if full != "unknown" else "unknown")
     pod = os.getenv("POD_NAME", "")
     ns = os.getenv("POD_NAMESPACE", "")
-    svc = os.getenv("OTEL_SERVICE_NAME", "aegisml-inference")
     return DeploymentMeta(
         version=ver,
         environment=env,
         git_commit=short,
         git_commit_full=full,
-        service_name=svc,
+        service_name=settings.service_name,
         pod_name=pod,
         pod_namespace=ns,
     )

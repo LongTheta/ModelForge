@@ -7,6 +7,18 @@ def test_healthz(client: TestClient) -> None:
     assert r.json() == {"status": "ok"}
 
 
+def test_status_runtime_metadata(client: TestClient) -> None:
+    r = client.get("/status")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["version"]
+    assert body["environment"]
+    assert body["git_commit"]
+    assert body["git_commit_full"]
+    assert body["service"]
+    assert body["model_version"]
+
+
 def test_readyz_when_loaded(client: TestClient) -> None:
     r = client.get("/readyz")
     assert r.status_code == 200
